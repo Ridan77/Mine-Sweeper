@@ -4,7 +4,7 @@
 const MINE = '💣'
 const FLAG = '🚩'
 const EMPTY = ''
-
+const HIDE = '🧱'
 const gLevel = {
     SIZE: 4,
     MINES: 2
@@ -14,23 +14,27 @@ const gGame = {
     isOn: false,
     revealedCount: 0,
     markedCount: 0,
-    secsPassed: 0
+    secsPassed: 0,
+    isWin: false,
 }
 var gBoard
-var gMarkedMines = 0
+
 
 var running = false
 var elapsedTime = 0
 var stopwatchInterval
 
 function init() {
+    gGame.isOn = false
     gGame.revealedCount = 0
     gGame.markedCount = 0
     gGame.secsPassed = 0
+    gGame.isWin = false
     gBoard = buildBoard()
     updateMinesCountOnBoard()
     renderBoard(gBoard, '.board-container')
-     allowRightClick()
+    allowRightClick()
+
 
 }
 
@@ -51,7 +55,6 @@ function buildBoard() {
     }
     board[2][2].isMine = true
     board[3][3].isMine = true
-
     return board
 }
 
@@ -62,7 +65,7 @@ function renderBoard(mat, selector) {
         strHTML += '<tr>'
         for (var j = 0; j < mat[0].length; j++) {
             var cell
-            if (!mat[i][j].isRevealed) cell = '🧱'
+            if (!mat[i][j].isRevealed) cell = HIDE
             else cell = mat[i][j].minesAroundCount
             const className = 'cell cell-' + i + '-' + j
             strHTML += `<td class="${className}" onclick="onCellClicked(this)">${cell}</td>`
@@ -71,29 +74,36 @@ function renderBoard(mat, selector) {
     }
     strHTML += '</tbody></table>'
     const elContainer = document.querySelector(selector)
-    console.log(elContainer)
     elContainer.innerHTML = strHTML
-   
-
 }
 
-function allowRightClick(){
+function allowRightClick() {
     const elCells = document.querySelectorAll('.cell')
     for (var i = 0; i < elCells.length; i++) {
         var currElCell = elCells[i]
-        // currElCell.addEventListener("contextmenu", (e) => { e.preventDefault() })
+        currElCell.addEventListener("contextmenu", (e) => { e.preventDefault() })
         currElCell.oncontextmenu = function () { onRightCellClicked(this) }
     }
 
-    
+
 }
 function onRightCellClicked(elCell) {
     var location = getCellCoord((elCell.classList[1]))
-    console.log(location)
-    gBoard[location.i][location.j].isMarked = ! gBoard[location.i][location.j].isMarked
-    renderBoard(location,FLAG)
-
-
+    if (!gGame.isOn) {
+        gGame.isOn = true
+        startStopwatch()
+    }
+    if (gBoard[location.i][location.j].isRevealed) return
+    if (!gBoard[location.i][location.j].isMarked) {
+        gBoard[location.i][location.j].isMarked = true
+        renderCell(location, FLAG)
+        gGame.markedCount++
+    } else {
+        gBoard[location.i][location.j].isMarked = false
+        renderCell(location, HIDE)
+        gGame.markedCount--
+    }
+    checkGameOver()
 }
 
 function onCellClicked(elCell) {
@@ -108,15 +118,22 @@ function onCellClicked(elCell) {
         gameOver()
         return
     }
-    if (!gBoard[location.i][location.j].isRevealed) {
-        if (gBoard[location.i][location.j].minesAroundCount > 0) revealeCell(location)
-        else gBoard = expandReveal(gBoard, location, 0)
-    }
-    if (checkGameOver()) console.log('Win')
+
+
+    if (gBoard[location.i][location.j].minesAroundCount > 0) revealeCell(location)
+    else gBoard = expandReveal(gBoard, location, 0)
+
+    checkGameOver()
+    console.log('Marked Flags:', gGame.markedCount)
+    console.log('Revealed cells:', gGame.revealedCount)
+
 }
 
 function revealeCell(location) {
+    if (gBoard[location.i][location.j].isRevealed) return
+    if (gBoard[location.i][location.j].isMarked) return
     gBoard[location.i][location.j].isRevealed = true
+    gGame.revealedCount++
     renderCell(location, gBoard[location.i][location.j].minesAroundCount)
 }
 
@@ -124,46 +141,61 @@ function revealeCell(location) {
 
 function expandReveal(board, location, itter) {
     if (itter > 100) return board
-    console.log(location.i, location.j, itter)
-
     for (var i = location.i - 1; i <= location.i + 1; i++) {
         if (i < 0 || i >= board.length) continue
 
         for (var j = location.j - 1; j <= location.j + 1; j++) {
             if (j < 0 || j >= board[i].length) continue
             revealeCell({ i, j })
-            if (board[i][j].minesAroundCount === 0) {
-                if ((!i !== location.i && j !== location.j) && !board[i][j].isRevealed) {
-                    console.log('in')
-                    expandReveal(board, { i, j }, ++itter)
-                }
-            }
+            // if (board[i][j].minesAroundCount === 0) {
+            //     if ((!i !== location.i && j !== location.j) && !board[i][j].isRevealed) {
+            //         expandReveal(board, { i, j }, ++itter)
+            //     }
+            // }
         }
     }
     return board
 }
 
 function changeLevel(elbtn) {
+    var btnTxt = elbtn.innerText
+    if (gGame.isOn) return
+    switch (btnTxt) {
+        case 'Beginner':
+            gLevel.MINES=2
+            gLevel.SIZE=4
+            break;
+        case 'Medium':
+            gLevel.MINES = 14
+            gLevel.SIZE = 8
+            break;
+        case 'Expert':
+
+            gLevel.MINES = 32
+            gLevel.SIZE = 12
+    }
+    init()
 }
 
 function checkGameOver() {
-    gMarkedMines = 2 ///DONT FORGET TO DELETE
-    var revealedCells = 0
+
+
     var finished = false
-    for (var i = 0; i < gLevel.SIZE; i++) {
-        for (var j = 0; j < gLevel.SIZE; j++) {
-            if (gBoard[i][j].isRevealed) revealedCells++
-        }
+    console.log('Marked as much as mines:', gGame.markedCount === gLevel.MINES)
+    console.log('Revealed as much as (board - mines) ', (gGame.revealedCount === (gLevel.SIZE ** 2 - gLevel.MINES)))
+
+    finished = (gGame.markedCount === gLevel.MINES) && (gGame.revealedCount === (gLevel.SIZE ** 2 - gLevel.MINES))
+    if (finished) {
+        gGame.isWin = true
+        gameOver()
     }
-    return (gMarkedMines === gLevel.MINES && revealedCells === gLevel.SIZE ** 2 - gLevel.MINES)
+    return (finished)
 }
-
-
 
 function gameOver() {
     gGame.isOn = false
     stopStopwatch()
-    var msg = 'Game Over'
+    var msg = gGame.isWin ? 'You Win' : 'Game Over'
     openModal(msg)
 }
 
