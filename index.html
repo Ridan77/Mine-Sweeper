@@ -1,8 +1,8 @@
-<!-- Sprint -->
-
+<!-- sprint -->
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,19 +10,25 @@
     <title>Mine Sweeper</title>
     <link rel="stylesheet" href="css/app.css">
 </head>
+
 <body onload="init()">
-    
+
     <div class="modal">
         <h2 class="msg">msg</h2>
         <button onclick="restartGame()">Play again</button>
     </div>
-    <h2 class="score">Score: <span>0</span></h2>
-  
+    <h2 class="stopwatch">Time: <span>00:00</span> min:sec</h2>
+    <h2 class="minesleft">Mines Left: <span></span></h2>
+
     <div class="board-container"></div>
-    
+    <div class="level">
+        <button class="1" onclick="changeLevel(this)">Beginner</button>
+        <button class="2" onclick="changeLevel(this)">Medium</button>
+        <button class="3" onclick="changeLevel(this)">Expert</button>
+    </div>
     <script src="js/utils.js"></script>
     <script src="js/game.js"></script>
- 
-</body>
-</html>
 
+</body>
+
+</html>

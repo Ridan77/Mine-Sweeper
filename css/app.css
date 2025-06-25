@@ -20,21 +20,20 @@ tbody{
 .modal {
 
 display: none;
-width: 300px;
-height: 200px;
+width: 200px;
+height: 100px;
 padding: 10px;
 /* margin-left: 150px; */
 border: solid 3px grey;
 background-color: aliceblue;
 color: blueviolet;
-font-size: 32px;
 position: absolute;
 top: 200px;
-left: calc(50% - 150px);
+left: calc(50% - 100px);
 }
 
 button{
-  margin-left: 10px;
+
   border-radius: 5%;
   color: blueviolet;
 }
@@ -47,10 +46,7 @@ img{
   width:max-content;
   margin: auto;
 }
+.level{
 
-.
-/* .formLine {
-  margin:10px;
-  padding:10px;
-  background-color: cornflowerblue;
-} */
+  margin-top: 50px;
+}

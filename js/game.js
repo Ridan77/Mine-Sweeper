@@ -1,4 +1,5 @@
 'use strict'
+//sprint
 
 const MINE = '💣'
 const FLAG = '🚩'
@@ -15,8 +16,12 @@ const gGame = {
     markedCount: 0,
     secsPassed: 0
 }
-
 var gBoard
+var gMarkedMines = 0
+
+var running = false
+var elapsedTime = 0
+var stopwatchInterval
 
 function init() {
     gGame.revealedCount = 0
@@ -25,8 +30,7 @@ function init() {
     gBoard = buildBoard()
     updateMinesCountOnBoard()
     renderBoard(gBoard, '.board-container')
-
-    // updateDisplay(0)
+     allowRightClick()
 
 }
 
@@ -39,7 +43,7 @@ function buildBoard() {
         for (var j = 0; j < gLevel.SIZE; j++) {
             board[i][j] = {
                 minesAroundCount: 0,
-                isRevealed: true,
+                isRevealed: false,
                 isMine: false,
                 isMarked: false,
             }
@@ -67,27 +71,99 @@ function renderBoard(mat, selector) {
     }
     strHTML += '</tbody></table>'
     const elContainer = document.querySelector(selector)
+    console.log(elContainer)
     elContainer.innerHTML = strHTML
+   
+
 }
 
-function onCellClicked(elCell){
-    if (!gGame.isOn) {
-        gGame.isOn=true
-        startStopwatch
+function allowRightClick(){
+    const elCells = document.querySelectorAll('.cell')
+    for (var i = 0; i < elCells.length; i++) {
+        var currElCell = elCells[i]
+        // currElCell.addEventListener("contextmenu", (e) => { e.preventDefault() })
+        currElCell.oncontextmenu = function () { onRightCellClicked(this) }
     }
-    console.log('HI')
+
+    
+}
+function onRightCellClicked(elCell) {
+    var location = getCellCoord((elCell.classList[1]))
+    console.log(location)
+    gBoard[location.i][location.j].isMarked = ! gBoard[location.i][location.j].isMarked
+    renderBoard(location,FLAG)
+
+
 }
 
-function updateScore(diff) {
-    gGame.score += diff
-    document.querySelector('h2 span').innerText = gGame.score
+function onCellClicked(elCell) {
+    var location = getCellCoord((elCell.classList[1]))
+    if (!gGame.isOn) {
+        gGame.isOn = true
+        startStopwatch()
+    }
+    if (gBoard[location.i][location.j].isMine) {
+        renderCell(location, MINE)
+        console.log('Game Over')
+        gameOver()
+        return
+    }
+    if (!gBoard[location.i][location.j].isRevealed) {
+        if (gBoard[location.i][location.j].minesAroundCount > 0) revealeCell(location)
+        else gBoard = expandReveal(gBoard, location, 0)
+    }
+    if (checkGameOver()) console.log('Win')
 }
+
+function revealeCell(location) {
+    gBoard[location.i][location.j].isRevealed = true
+    renderCell(location, gBoard[location.i][location.j].minesAroundCount)
+}
+
+
+
+function expandReveal(board, location, itter) {
+    if (itter > 100) return board
+    console.log(location.i, location.j, itter)
+
+    for (var i = location.i - 1; i <= location.i + 1; i++) {
+        if (i < 0 || i >= board.length) continue
+
+        for (var j = location.j - 1; j <= location.j + 1; j++) {
+            if (j < 0 || j >= board[i].length) continue
+            revealeCell({ i, j })
+            if (board[i][j].minesAroundCount === 0) {
+                if ((!i !== location.i && j !== location.j) && !board[i][j].isRevealed) {
+                    console.log('in')
+                    expandReveal(board, { i, j }, ++itter)
+                }
+            }
+        }
+    }
+    return board
+}
+
+function changeLevel(elbtn) {
+}
+
+function checkGameOver() {
+    gMarkedMines = 2 ///DONT FORGET TO DELETE
+    var revealedCells = 0
+    var finished = false
+    for (var i = 0; i < gLevel.SIZE; i++) {
+        for (var j = 0; j < gLevel.SIZE; j++) {
+            if (gBoard[i][j].isRevealed) revealedCells++
+        }
+    }
+    return (gMarkedMines === gLevel.MINES && revealedCells === gLevel.SIZE ** 2 - gLevel.MINES)
+}
+
+
 
 function gameOver() {
     gGame.isOn = false
-    clearInterval(gIntervalGhosts)
-    clearInterval(gIntervalCherry)
-    var msg = gGame.isVictory ? 'Pacman Win' : 'Game Over'
+    stopStopwatch()
+    var msg = 'Game Over'
     openModal(msg)
 }
 
@@ -103,9 +179,9 @@ function closeModal() {
 }
 function restartGame() {
     closeModal()
+    document.querySelector('.stopwatch span').innerText = `00:00 min:sec`
     init()
 }
-
 
 // Convert a location object {i, j} to a selector and render a value in that element
 function renderCell(location, value) {
@@ -114,6 +190,13 @@ function renderCell(location, value) {
     elCell.innerHTML = value
 }
 
+function getCellCoord(strCellId) {
+    const coord = {}
+    const parts = strCellId.split('-')
+    coord.i = +parts[1]
+    coord.j = +parts[2]
+    return coord
+}
 
 // Returns the class name for a specific cell
 function getClassName(location) {
@@ -121,10 +204,9 @@ function getClassName(location) {
     return cellClass
 }
 
-
 function startStopwatch() {
     if (running) return
-    var startTime = Date.now() - elapsedTime
+    const startTime = Date.now() - elapsedTime
 
     running = true
     stopwatchInterval = setInterval(() => {
@@ -146,14 +228,10 @@ function resetStopwatch() {
 
 function updateDisplay() {
 
-    const seconds = (elapsedTime / 1000).toFixed(2)
+    const seconds = (elapsedTime / 1000).toFixed(0)
+    const minutes = (seconds / 60).toFixed(0)
     var stopWatch = document.querySelector('.stopwatch')
-    stopWatch.innerText = `${seconds} Sec`
-}
-
-
-function getPacmanHTML() {
-    return `<div style="transform: rotate(${gPacman.rotatePos}deg)">${PACMAN}</div>`
+    document.querySelector('.stopwatch span').innerText = `${minutes}:${seconds}`
 }
 
 function updateMinesCountOnBoard() {
@@ -163,7 +241,6 @@ function updateMinesCountOnBoard() {
         }
     }
 }
-
 
 function countMinesNeighbours(location) {
     var neighborsCount = 0

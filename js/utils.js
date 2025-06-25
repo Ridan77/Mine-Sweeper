@@ -1,5 +1,7 @@
 'use strict'
 
+//Sprint
+
 
 // location such as: {i: 2, j: 7}
 function renderCell(location, value) {
