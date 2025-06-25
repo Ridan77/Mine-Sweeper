@@ -41,3 +41,27 @@ function findEmptyPos() {
     const emptyPos = emptyPositions[randIdx]
     return emptyPos
 }
+
+function startStopwatch() {
+    if (gGame.isOn) return
+    const startTime = Date.now()
+    gGame.isOn = true
+    stopwatchInterval = setInterval(() => {
+        gGame.secsPassed = (Date.now() - startTime)
+        updateDisplay()
+    }, 1000)
+}
+function stopStopwatch() {
+    gGame.isOn = false
+    clearInterval(stopwatchInterval)
+}
+function resetStopwatch() {
+    stopStopwatch()
+    gGame.secsPassed = 0
+    updateDisplay()
+}
+function updateDisplay() {
+    const seconds = (gGame.secsPassed / 1000).toFixed(0)
+    const minutes = (seconds / 60).toFixed(0)
+    document.querySelector('.stopwatch').innerText = `${minutes}:${seconds}`
+}

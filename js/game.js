@@ -5,6 +5,9 @@ const MINE = '💣'
 const FLAG = '🚩'
 const EMPTY = ''
 const HIDE = '🧱'
+const NORMAL = '😁'
+const WIN = '😎'
+const LOSE = '🤯'
 const gLevel = {
     SIZE: 4,
     MINES: 2
@@ -16,6 +19,7 @@ const gGame = {
     markedCount: 0,
     secsPassed: 0,
     isWin: false,
+    livesLeft: 3,
 }
 var gBoard
 
@@ -28,14 +32,14 @@ function init() {
     gGame.isOn = false
     gGame.revealedCount = 0
     gGame.markedCount = 0
-    gGame.secsPassed = 0
     gGame.isWin = false
+    gGame.livesLeft = 3
     gBoard = buildBoard()
-    updateMinesCountOnBoard()
     renderBoard(gBoard, '.board-container')
+    document.querySelector('.minesleft').innerText = gLevel.MINES
+    document.querySelector('.lives').innerText = gGame.livesLeft
+    document.querySelector('.emoji').innerText = NORMAL
     allowRightClick()
-
-
 }
 
 function buildBoard() {
@@ -47,15 +51,49 @@ function buildBoard() {
         for (var j = 0; j < gLevel.SIZE; j++) {
             board[i][j] = {
                 minesAroundCount: 0,
-                isRevealed: false,
+                isRevealed: false,    //dont forger to change to false
                 isMine: false,
                 isMarked: false,
             }
         }
     }
-    board[2][2].isMine = true
-    board[3][3].isMine = true
+    // board[2][2].isMine = true
+    // board[3][3].isMine = true
     return board
+}
+
+function randomizeMines(location) {
+    var rndlocations = []
+    console.log(location.i,location.j)
+    for (var i = 0; i < gLevel.MINES; i++) {
+        var rndI = getRandomIntInclusive(0, gLevel.SIZE - 1)
+        var rndJ = getRandomIntInclusive(0, gLevel.SIZE - 1)
+
+        if (!gBoard[rndI][rndJ].isMine && (rndI !==location.i && rndJ!==location.j)) gBoard[rndI][rndJ].isMine = true
+        else i--
+        rndlocations.push({ i: rndI, j: rndJ })
+    }
+    console.log(rndlocations)
+    printMines()
+
+}
+
+function printMines() {
+    var table = []
+    for (var i = 0; i < gLevel.SIZE; i++) {
+        table[i] = []
+        for (var j = 0; j < gLevel.SIZE; j++) {
+            if (gBoard[i][j].isMine) table[i][j] = MINE
+            else table[i][j] = ''
+        }
+    }
+    console.table(table)
+}
+
+function startGame(location) {
+    randomizeMines(location)
+    updateMinesCountOnBoard()
+    startStopwatch()
 }
 
 function renderBoard(mat, selector) {
@@ -84,49 +122,42 @@ function allowRightClick() {
         currElCell.addEventListener("contextmenu", (e) => { e.preventDefault() })
         currElCell.oncontextmenu = function () { onRightCellClicked(this) }
     }
-
-
 }
+
+
 function onRightCellClicked(elCell) {
     var location = getCellCoord((elCell.classList[1]))
-    if (!gGame.isOn) {
-        gGame.isOn = true
-        startStopwatch()
-    }
     if (gBoard[location.i][location.j].isRevealed) return
     if (!gBoard[location.i][location.j].isMarked) {
         gBoard[location.i][location.j].isMarked = true
         renderCell(location, FLAG)
         gGame.markedCount++
+        document.querySelector('.minesleft').innerText = gLevel.MINES - gGame.markedCount
     } else {
         gBoard[location.i][location.j].isMarked = false
         renderCell(location, HIDE)
         gGame.markedCount--
+        document.querySelector('.minesleft').innerText = gLevel.MINES - gGame.markedCount
     }
-    checkGameOver()
+    if (checkGameOver()) {
+        gGame.isWin = true
+        gameOver(location)
+    }
 }
 
 function onCellClicked(elCell) {
     var location = getCellCoord((elCell.classList[1]))
-    if (!gGame.isOn) {
-        gGame.isOn = true
-        startStopwatch()
-    }
+    if (!gGame.isOn) startGame(location)
     if (gBoard[location.i][location.j].isMine) {
-        renderCell(location, MINE)
-        console.log('Game Over')
-        gameOver()
+        gameOver(location)
         return
     }
-
-
     if (gBoard[location.i][location.j].minesAroundCount > 0) revealeCell(location)
     else gBoard = expandReveal(gBoard, location, 0)
-
-    checkGameOver()
-    console.log('Marked Flags:', gGame.markedCount)
-    console.log('Revealed cells:', gGame.revealedCount)
-
+    if (checkGameOver()) {
+        gGame.isWin = true
+        gameOver(location)
+    }
 }
 
 function revealeCell(location) {
@@ -134,10 +165,12 @@ function revealeCell(location) {
     if (gBoard[location.i][location.j].isMarked) return
     gBoard[location.i][location.j].isRevealed = true
     gGame.revealedCount++
-    renderCell(location, gBoard[location.i][location.j].minesAroundCount)
+    var cellContent = gBoard[location.i][location.j].minesAroundCount
+    if (cellContent === 0) {
+        renderCell(location,EMPTY)
+    } else renderCell(location, gBoard[location.i][location.j].minesAroundCount)
+    document
 }
-
-
 
 function expandReveal(board, location, itter) {
     if (itter > 100) return board
@@ -162,8 +195,8 @@ function changeLevel(elbtn) {
     if (gGame.isOn) return
     switch (btnTxt) {
         case 'Beginner':
-            gLevel.MINES=2
-            gLevel.SIZE=4
+            gLevel.MINES = 2
+            gLevel.SIZE = 4
             break;
         case 'Medium':
             gLevel.MINES = 14
@@ -178,24 +211,28 @@ function changeLevel(elbtn) {
 }
 
 function checkGameOver() {
-
-
-    var finished = false
-    console.log('Marked as much as mines:', gGame.markedCount === gLevel.MINES)
-    console.log('Revealed as much as (board - mines) ', (gGame.revealedCount === (gLevel.SIZE ** 2 - gLevel.MINES)))
-
-    finished = (gGame.markedCount === gLevel.MINES) && (gGame.revealedCount === (gLevel.SIZE ** 2 - gLevel.MINES))
-    if (finished) {
-        gGame.isWin = true
-        gameOver()
-    }
-    return (finished)
+    var condtion1 = gGame.markedCount === gLevel.MINES
+    var condtion2 = gGame.revealedCount === (gLevel.SIZE ** 2 - gLevel.MINES)
+    return (condtion1 && condtion2)
 }
 
-function gameOver() {
-    gGame.isOn = false
+function gameOver(location) {
+    if (gGame.livesLeft > 1 && !gGame.isWin) {
+        renderCell(location, MINE)
+        gGame.livesLeft--
+        document.querySelector('.lives').innerText = gGame.livesLeft
+        openModal(`You died, you have ${gGame.livesLeft} Lives to Go`)
+        document.querySelector('.modal button').style.display = 'none'
+        setTimeout(() => {
+            document.querySelector('.modal button').style.display = 'inline'
+            closeModal()
+        }, 3000);
+        return
+    }
     stopStopwatch()
+
     var msg = gGame.isWin ? 'You Win' : 'Game Over'
+    document.querySelector('.emoji').innerText = gGame.isWin ? WIN : LOSE
     openModal(msg)
 }
 
@@ -209,17 +246,19 @@ function closeModal() {
     var elModal = document.querySelector('.modal')
     elModal.style.display = "none"
 }
+
 function restartGame() {
     closeModal()
-    document.querySelector('.stopwatch span').innerText = `00:00 min:sec`
+    document.querySelector('.stopwatch').innerText = `00:00`
+    document.querySelector('.minesleft').innerText = gLevel.MINES
     init()
 }
 
-// Convert a location object {i, j} to a selector and render a value in that element
 function renderCell(location, value) {
     const cellSelector = '.' + getClassName(location) // .cell-2-4
     const elCell = document.querySelector(cellSelector)
     elCell.innerHTML = value
+    elCell.style.backgroundColor ='grey'
 }
 
 function getCellCoord(strCellId) {
@@ -230,40 +269,9 @@ function getCellCoord(strCellId) {
     return coord
 }
 
-// Returns the class name for a specific cell
 function getClassName(location) {
     const cellClass = `cell-${location.i}-${location.j}`
     return cellClass
-}
-
-function startStopwatch() {
-    if (running) return
-    const startTime = Date.now() - elapsedTime
-
-    running = true
-    stopwatchInterval = setInterval(() => {
-        elapsedTime = (Date.now() - startTime)
-        updateDisplay()
-    }, 100)
-}
-
-function stopStopwatch() {
-    running = false
-    clearInterval(stopwatchInterval)
-}
-
-function resetStopwatch() {
-    stopStopwatch()
-    elapsedTime = 0
-    updateDisplay()
-}
-
-function updateDisplay() {
-
-    const seconds = (elapsedTime / 1000).toFixed(0)
-    const minutes = (seconds / 60).toFixed(0)
-    var stopWatch = document.querySelector('.stopwatch')
-    document.querySelector('.stopwatch span').innerText = `${minutes}:${seconds}`
 }
 
 function updateMinesCountOnBoard() {

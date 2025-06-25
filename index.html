@@ -17,14 +17,39 @@
         <h2 class="msg">msg</h2>
         <button onclick="restartGame()">Play again</button>
     </div>
-    <h2 class="stopwatch">Time: <span>00:00</span> min:sec</h2>
-    <h2 class="minesleft">Mines Left: <span></span></h2>
+
+    <table class="stats">
+        <caption>
+            Game's Statistics
+        </caption>
+        <thead>
+            <tr>
+                <th class="headline">Elapsed Time</th>
+                <th class="headline">Emoji</th>
+                <th class="headline">Mines Left</th>
+                <th class="headline">Lives Left</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th class="stopwatch">00:00</th>
+                <td class="emoji">😊</td>
+                <td class="minesleft"></td>
+                <td class="lives"></td>
+            </tr>
+
+    </table>
 
     <div class="board-container"></div>
     <div class="level">
         <button class="level l1" onclick="changeLevel(this)">Beginner</button>
         <button class="level l2" onclick="changeLevel(this)">Medium</button>
         <button class="levev l3" onclick="changeLevel(this)">Expert</button>
+    </div>
+
+
+    <div class="footer">
+        <h4>Dan Ribak</h4>
     </div>
     <script src="js/utils.js"></script>
     <script src="js/game.js"></script>
