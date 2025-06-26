@@ -8,6 +8,7 @@ const HIDE = '🧱'
 const NORMAL = '😁'
 const WIN = '😎'
 const LOSE = '🤯'
+const SAFE = '🛟'
 const gLevel = {
     SIZE: 4,
     MINES: 2
@@ -23,6 +24,11 @@ const gGame = {
     hintsLeft: 0,
     isHint: false,
     isOnHold: false,
+    safeClicksLeft: 3,
+    isDarkMode: true,
+    previousCellLocation: null,
+    isMinesAddedManually: false,
+    isFinishedGettingMines: true
 }
 var gBoard
 
@@ -38,6 +44,9 @@ function init() {
     gGame.isWin = false
     gGame.livesLeft = 3
     gGame.hintsLeft = 3
+    gGame.safeClicksLeft = 3
+    gGame.isFinishedGettingMines=true
+    gGame.isMinesAddedManually=false
     gBoard = buildBoard()
     renderBoard(gBoard, '.board-container')
     document.querySelector('.minesleft').innerText = gLevel.MINES
@@ -45,6 +54,7 @@ function init() {
     document.querySelector('.hints').innerText = gGame.hintsLeft
     document.querySelector('.emoji').innerText = NORMAL
     allowRightClick()
+
 }
 
 function buildBoard() {
@@ -62,8 +72,6 @@ function buildBoard() {
             }
         }
     }
-    // board[2][2].isMine = true
-    // board[3][3].isMine = true
     return board
 }
 
@@ -94,10 +102,40 @@ function printMines() {
     console.table(table)
 }
 
+
+function addMineToModel(location) {
+gBoard[location.i][location.j].isMine=true
+gLevel.MINES++
+
+}
+
+function onGetMinesManually() {
+    gGame.isMinesAddedManually = true
+    gGame.isFinishedGettingMines = false
+    gLevel.MINES=0
+    const elOnBtn = document.querySelector('.manualOn')
+    elOnBtn.style.backgroundColor = 'yellow'
+    elOnBtn.style.color = 'black'
+    const elOffBtn = document.querySelector('.manualOff')
+    elOffBtn.style.display = 'inline'
+}
+
+function onFinishGettingMines() {
+    gGame.isFinishedGettingMines = true
+    const elOnBtn = document.querySelector('.manualOn')
+    elOnBtn.style.backgroundColor = 'white'
+    elOnBtn.style.color = 'blue violet'
+    const elOffBtn = document.querySelector('.manualOff')
+    elOffBtn.style.display = 'none'
+     document.querySelector('.minesleft').innerText = gLevel.MINES
+}
+
 function startGame(location) {
-    randomizeMines(location)
-    updateMinesCountOnBoard()
-    startStopwatch()
+    if (!gGame.isMinesAddedManually) randomizeMines(location)
+    if (gGame.isFinishedGettingMines) {
+        updateMinesCountOnBoard()
+        startStopwatch()
+    }
 }
 
 function renderBoard(mat, selector) {
@@ -150,9 +188,12 @@ function onRightCellClicked(elCell) {
 
 function onCellClicked(elCell) {
     var location = getCellCoord((elCell.classList[1]))
-
-    if (!gGame.isOn) startGame(location)
     if (gGame.isOnHold) return
+    if (!gGame.isFinishedGettingMines) {
+        addMineToModel(location)
+        return
+    }
+    if (!gGame.isOn) startGame(location)
     if (gGame.isHint) {
         displayHint(location)
         return
@@ -166,12 +207,18 @@ function onCellClicked(elCell) {
         revealeCell(location)
         expandReveal(location)
     }
+    gGame.previousCellLocation = location
     if (checkGameOver()) {
         gGame.isWin = true
         gameOver(location)
     }
 }
 
+function undo() {
+    if (!gGame.previousCellLocation) return
+    gBoard[gGame.previousCellLocation.i][gGame.previousCellLocation.j].isRevealed = false
+    renderCell(gGame.previousCellLocation, HIDE, true)
+}
 function revealeCell(location) {
     if (gBoard[location.i][location.j].isRevealed) return
     if (gBoard[location.i][location.j].isMarked) return
@@ -230,7 +277,7 @@ function displayHint(location) {
     elhint.style.color = 'white'
 }
 
-function toggleHintMode() {
+function onToggleHintMode() {
     var elhint = document.querySelector('.hints')
     if (gGame.hintsLeft === 0) return
     if (!gGame.isHint) {
@@ -244,6 +291,49 @@ function toggleHintMode() {
         elhint.style.color = 'white'
     }
 }
+
+function onSafeClick() {
+    if (gGame.safeClicksLeft === 0) return
+    document.querySelector('.sclicks').innerText = --gGame.safeClicksLeft
+    const sClicksLocations = []
+    for (var i = 0; i < gLevel.SIZE; i++) {
+        for (var j = 0; j < gLevel.SIZE; j++) {
+            if (gBoard[i][j].isRevealed) continue
+            if (gBoard[i][j].isMine) continue
+            if (gBoard[i][j].isMarked) continue
+            sClicksLocations.push({ i, j })
+        }
+    }
+    const rndSClickLocation = sClicksLocations[getRandomIntInclusive(0, sClicksLocations.length - 1)]
+    renderCell(rndSClickLocation, SAFE, true)
+    setTimeout(() => {
+        renderCell(rndSClickLocation, HIDE, true)
+    }, 1000)
+
+}
+
+function toggleDarkMode() {
+    if (gGame.isOn) return
+    const elBody = document.querySelector('body')
+    const elTds = elBody.querySelectorAll('td')
+    if (gGame.isDarkMode) {
+        elBody.style.backgroundColor = 'white'
+        elBody.style.color = 'black'
+        for (var i = 0; i < elTds.length; i++) {
+            elTds[i].style.backgroundColor = 'white'
+            elTds[i].style.color = 'black'
+        }
+    } else {
+        elBody.style.backgroundColor = 'black'
+        elBody.style.color = 'white'
+        for (var i = 0; i < elTds.length; i++) {
+            elTds[i].style.backgroundColor = 'black'
+            elTds[i].style.color = 'white'
+        }
+    }
+    gGame.isDarkMode = !gGame.isDarkMode
+}
+
 
 function changeLevel(elbtn) {
     var btnTxt = elbtn.innerText
@@ -295,7 +385,6 @@ function gameOver(location) {
     storeScore(gLevel.SIZE, gGame.secsPassed)
 }
 
-
 function storeScore(level, score) {
     var levelName
     switch (level) {
@@ -311,7 +400,6 @@ function storeScore(level, score) {
 
     }
     const bestScore = localStorage.getItem(`${levelName}`)
-    console.log('Best score', level, score, bestScore)
     if (score / 1000 <= bestScore || bestScore === null) localStorage.setItem(`${levelName}`, `${score / 1000}`);
 }
 
@@ -338,6 +426,7 @@ function renderCell(location, value, isFlash) {
     const elCell = document.querySelector(cellSelector)
     elCell.innerHTML = value
     if (!isFlash) elCell.style.backgroundColor = 'grey'
+    else elCell.style.backgroundColor = 'black'
 }
 
 function getCellCoord(strCellId) {
