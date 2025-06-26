@@ -28,8 +28,9 @@
                 <th class="headline">Emoji</th>
                 <th class="headline">Mines Left</th>
                 <th class="headline">Lives Left</th>
-                <th class="headline">Hints Left</th>
                 <th class="headline">Safe Clicks Left</th>
+                <th class="headline">Hints Left</th>
+                <th class="headline">Mega Hints Left</th>
             </tr>
         </thead>
         <tbody>
@@ -38,8 +39,9 @@
                 <td class="emoji">😊</td>
                 <td class="minesleft"></td>
                 <td class="lives"></td>
-                <td class="hints"></td>
                 <td class="sclicks">3</td>
+                <td class="hints"></td>
+                <td class="megahints">1</td>
 
             </tr>
 
@@ -51,12 +53,16 @@
         <button class="level l2" onclick="changeLevel(this)">Medium</button>
         <button class="levev l3" onclick="changeLevel(this)">Expert</button>
         <hr>
-        <button class="btnToggle" onclick="onToggleHintMode()">Hint Mode</button>
         <button class="btn" onclick="onSafeClick()">Safe Click</button>
         <button class="btnToggle" onclick="toggleDarkMode()">Toggle Dark Mode</button>
         <button class="btn" onclick="undo()">Undo</button>
+        <button class="btn" onclick="exterminator()">Exterminator</button>
+        <button class="btnToggle" onclick="onToggleHintMode()">Hint Mode</button>
+        <button class="togglemegahint" onclick="onToggleMegaHintMode()">Mega Hint Mode</button>
+        <hr>
         <button class="manualOn" onclick="onGetMinesManually()">Set Mines</button>
         <button class="manualOff" style="display:none" onclick="onFinishGettingMines()">Stop Setting Mines</button>
+      
 
 
     </div>

@@ -14,7 +14,6 @@ function getRandomIntInclusive(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-
 function getRandomRgbColor() {
   // Generate random values for red, green, and blue (0-255)
   let r = Math.floor(Math.random() * 256);
@@ -23,7 +22,6 @@ function getRandomRgbColor() {
   // Return the color in RGB format
   return `rgb(${r}, ${g}, ${b})`;
 }
-
 
 function findEmptyPos() {
     const emptyPositions = []

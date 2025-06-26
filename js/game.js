@@ -9,6 +9,9 @@ const NORMAL = '😁'
 const WIN = '😎'
 const LOSE = '🤯'
 const SAFE = '🛟'
+const FLAG1 = '▶️'
+const FLAG2 = '⏹️'
+
 const gLevel = {
     SIZE: 4,
     MINES: 2
@@ -28,10 +31,14 @@ const gGame = {
     isDarkMode: true,
     previousCellLocation: null,
     isMinesAddedManually: false,
-    isFinishedGettingMines: true
+    isFinishedGettingMines: true,
+    megaHintsLeft: 1,
+    isMegaHint: false,
+    megaHint1stLocation: null,
+    megaHint2ndLocation: null,
+    exterminatorLeft: 1,
 }
 var gBoard
-
 
 var running = false
 var elapsedTime = 0
@@ -45,16 +52,17 @@ function init() {
     gGame.livesLeft = 3
     gGame.hintsLeft = 3
     gGame.safeClicksLeft = 3
-    gGame.isFinishedGettingMines=true
-    gGame.isMinesAddedManually=false
+    gGame.isFinishedGettingMines = true
+    gGame.isMinesAddedManually = false
+    gGame.megaHintsLeft = 1
     gBoard = buildBoard()
     renderBoard(gBoard, '.board-container')
     document.querySelector('.minesleft').innerText = gLevel.MINES
     document.querySelector('.lives').innerText = gGame.livesLeft
     document.querySelector('.hints').innerText = gGame.hintsLeft
     document.querySelector('.emoji').innerText = NORMAL
+    document.querySelector('.megahints').innerText = gGame.megaHintsLeft
     allowRightClick()
-
 }
 
 function buildBoard() {
@@ -66,7 +74,7 @@ function buildBoard() {
         for (var j = 0; j < gLevel.SIZE; j++) {
             board[i][j] = {
                 minesAroundCount: 0,
-                isRevealed: false,    //dont forger to change to false
+                isRevealed: false,
                 isMine: false,
                 isMarked: false,
             }
@@ -77,7 +85,7 @@ function buildBoard() {
 
 function randomizeMines(location) {
     var rndlocations = []
-    console.log(location.i, location.j)
+
     for (var i = 0; i < gLevel.MINES; i++) {
         var rndI = getRandomIntInclusive(0, gLevel.SIZE - 1)
         var rndJ = getRandomIntInclusive(0, gLevel.SIZE - 1)
@@ -102,17 +110,58 @@ function printMines() {
     console.table(table)
 }
 
+function getAllMines() {
+    const minesLocations = []
+    for (var i = 0; i < gLevel.SIZE; i++) {
+        for (var j = 0; j < gLevel.SIZE; j++) {
+            if (gBoard[i][j].isMine) minesLocations.push({ i, j })
+        }
+    }
+    return minesLocations
+}
 
-function addMineToModel(location) {
-gBoard[location.i][location.j].isMine=true
-gLevel.MINES++
+function renderAllRevealedCells() {
+    const revealedCells = []
+    for (var i = 0; i < gLevel.SIZE; i++) {
+        for (var j = 0; j < gLevel.SIZE; j++) {
+            if (gBoard[i][j].isRevealed) revealedCells.push({ i, j })
+        }
+    }
+    for (var i = 0; i < revealedCells.length; i++) {
+        var str = gBoard[revealedCells[i].i][revealedCells[i].j].minesAroundCount
+        if (str === 0) str = EMPTY
+        renderCell(revealedCells[i], str, false)
+    }
+}
+// exterminator wont work in beginner mode
+function exterminator() {
+    if (gLevel.SIZE === 4) return
+    if (gGame.exterminatorLeft === 0) return
+    const allMines = getAllMines()
+    if (!allMines) return
+    for (var i = 0; i < 3; i++) {
+        const rndIdx = getRandomIntInclusive(0, allMines.length - 1)
+        var currMine = allMines.splice(rndIdx, 1)[0]
+        console.log(currMine)
+        gBoard[currMine.i][currMine.j].isMine = false
+    }
+    updateMinesCountOnBoard()
+    renderAllRevealedCells()
+    gLevel.MINES -= 3
+    document.querySelector('.minesleft').innerText = gLevel.MINES
+}
 
+function addMineToModelAndDom(location) {
+    gBoard[location.i][location.j].isMine = true
+    renderCell(location, MINE, true)
+    gLevel.MINES++
 }
 
 function onGetMinesManually() {
+    if (gGame.isOn) return
     gGame.isMinesAddedManually = true
     gGame.isFinishedGettingMines = false
-    gLevel.MINES=0
+    gLevel.MINES = 0
     const elOnBtn = document.querySelector('.manualOn')
     elOnBtn.style.backgroundColor = 'yellow'
     elOnBtn.style.color = 'black'
@@ -124,10 +173,12 @@ function onFinishGettingMines() {
     gGame.isFinishedGettingMines = true
     const elOnBtn = document.querySelector('.manualOn')
     elOnBtn.style.backgroundColor = 'white'
-    elOnBtn.style.color = 'blue violet'
+    elOnBtn.style.color = 'blueviolet'
     const elOffBtn = document.querySelector('.manualOff')
     elOffBtn.style.display = 'none'
-     document.querySelector('.minesleft').innerText = gLevel.MINES
+    document.querySelector('.minesleft').innerText = gLevel.MINES
+    renderBoard(gBoard, '.board-container')
+    allowRightClick()
 }
 
 function startGame(location) {
@@ -190,12 +241,15 @@ function onCellClicked(elCell) {
     var location = getCellCoord((elCell.classList[1]))
     if (gGame.isOnHold) return
     if (!gGame.isFinishedGettingMines) {
-        addMineToModel(location)
+        addMineToModelAndDom(location)
         return
     }
     if (!gGame.isOn) startGame(location)
     if (gGame.isHint) {
         displayHint(location)
+        return
+    } else if (gGame.isMegaHint) {
+        displayMegaHit(location)
         return
     }
     if (gBoard[location.i][location.j].isMine) {
@@ -217,8 +271,10 @@ function onCellClicked(elCell) {
 function undo() {
     if (!gGame.previousCellLocation) return
     gBoard[gGame.previousCellLocation.i][gGame.previousCellLocation.j].isRevealed = false
+    gGame.revealedCount--
     renderCell(gGame.previousCellLocation, HIDE, true)
 }
+
 function revealeCell(location) {
     if (gBoard[location.i][location.j].isRevealed) return
     if (gBoard[location.i][location.j].isMarked) return
@@ -228,7 +284,6 @@ function revealeCell(location) {
     if (cellContent === 0) {
         renderCell(location, EMPTY, false)
     } else renderCell(location, gBoard[location.i][location.j].minesAroundCount, false)
-    document
 }
 
 function expandReveal(location) {
@@ -246,12 +301,47 @@ function expandReveal(location) {
         }
     }
 }
+function displayMegaHit(location) {
+    const flashedCellsLocations = []
+
+    if (gGame.megaHint1stLocation) gGame.megaHint2ndLocation = location
+    else {
+        gGame.megaHint1stLocation = location
+        renderCell(location, FLAG1, true)
+        return
+    }
+    for (var i = gGame.megaHint1stLocation.i; i <= gGame.megaHint2ndLocation.i; i++) {
+        for (var j = gGame.megaHint1stLocation.j; j <= gGame.megaHint2ndLocation.j; j++) {
+            if (gBoard[i][j].isRevealed) continue
+            if (gBoard[i][j].isMine) {
+                renderCell({ i, j }, MINE, true)
+                flashedCellsLocations.push({ i, j })
+            } else {
+                renderCell({ i, j }, gBoard[i][j].minesAroundCount, true)
+                flashedCellsLocations.push({ i, j })
+            }
+        }
+    }
+    setTimeout(() => {
+        for (var i = 0; i < flashedCellsLocations.length; i++) {
+            renderCell(flashedCellsLocations[i], HIDE, true)
+        }
+    }, 1500)
+    if (gGame.megaHint2ndLocation) {
+        gGame.megaHintsLeft--
+        gGame.megaHint1stLocation = null
+        gGame.megaHint2ndLocation = null
+        gGame.isMegaHint = false
+        const elmhint = document.querySelector('.megahints')
+        elmhint.style.backgroundColor = 'black'
+        elmhint.style.color = 'white'
+        elmhint.innerText = gGame.megaHintsLeft
+    }
+}
 
 function displayHint(location) {
     const flashedCellsLocations = []
-    const elhint = document.querySelector('.hints')
-    gGame.hintsLeft--
-    document.querySelector('.hints').innerText = gGame.hintsLeft
+
     for (var i = location.i - 1; i <= location.i + 1; i++) {
         if (i < 0 || i >= gBoard.length) continue
 
@@ -272,9 +362,12 @@ function displayHint(location) {
             renderCell(flashedCellsLocations[i], HIDE, true)
         }
     }, 1500)
+    gGame.hintsLeft--
     gGame.isHint = false
+    const elhint = document.querySelector('.hints')
     elhint.style.backgroundColor = 'black'
     elhint.style.color = 'white'
+    document.querySelector('.hints').innerText = gGame.hintsLeft
 }
 
 function onToggleHintMode() {
@@ -292,9 +385,25 @@ function onToggleHintMode() {
     }
 }
 
+function onToggleMegaHintMode() {
+
+    var elMegaHint = document.querySelector('.megahints')
+    if (gGame.megaHintsLeft === 0) return
+    if (!gGame.isMegaHint) {
+        gGame.isMegaHint = true
+        elMegaHint.style.backgroundColor = 'yellow'
+        elMegaHint.style.color = 'black'
+    }
+    else {
+        gGame.isMegaHint = false
+        elMegaHint.style.backgroundColor = 'black'
+        elMegaHint.style.color = 'white'
+    }
+
+}
+
 function onSafeClick() {
     if (gGame.safeClicksLeft === 0) return
-    document.querySelector('.sclicks').innerText = --gGame.safeClicksLeft
     const sClicksLocations = []
     for (var i = 0; i < gLevel.SIZE; i++) {
         for (var j = 0; j < gLevel.SIZE; j++) {
@@ -309,7 +418,7 @@ function onSafeClick() {
     setTimeout(() => {
         renderCell(rndSClickLocation, HIDE, true)
     }, 1000)
-
+    document.querySelector('.sclicks').innerText = --gGame.safeClicksLeft
 }
 
 function toggleDarkMode() {
@@ -334,7 +443,6 @@ function toggleDarkMode() {
     gGame.isDarkMode = !gGame.isDarkMode
 }
 
-
 function changeLevel(elbtn) {
     var btnTxt = elbtn.innerText
     if (gGame.isOn) return
@@ -351,15 +459,14 @@ function changeLevel(elbtn) {
             gLevel.MINES = 32
             gLevel.SIZE = 12
             break;
-
     }
     init()
 }
 
 function checkGameOver() {
-    var condtion1 = gGame.markedCount === gLevel.MINES
-    var condtion2 = gGame.revealedCount === (gLevel.SIZE ** 2 - gLevel.MINES)
-    return (condtion1 && condtion2)
+    var condition1 = gGame.markedCount === gLevel.MINES
+    var condition2 = gGame.revealedCount === (gLevel.SIZE ** 2 - gLevel.MINES)
+    return (condition1 && condition2)
 }
 
 function gameOver(location) {
@@ -378,12 +485,14 @@ function gameOver(location) {
         return
     }
     stopStopwatch()
-
     var msg = gGame.isWin ? 'You Win' : 'Game Over'
     document.querySelector('.emoji').innerText = gGame.isWin ? WIN : LOSE
     openModal(msg)
-    storeScore(gLevel.SIZE, gGame.secsPassed)
+    if (!gGame.isMinesAddedManually) storeScore(gLevel.SIZE, gGame.secsPassed)
+    gLevel.SIZE = 4
+    gLevel.MINES = 2
 }
+
 
 function storeScore(level, score) {
     var levelName

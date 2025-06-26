@@ -12,7 +12,7 @@ tbody {
 }
 
 caption {
-  caption-side: top;
+  caption-side:bottom;
   padding: 10px;
   font-weight: bold;
 }
@@ -22,7 +22,7 @@ caption {
 }
 table {
   margin: auto;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
   border-collapse: collapse;
   border: 2px solid rgb(140 140 140);
   font-family: sans-serif;
@@ -30,29 +30,30 @@ table {
   letter-spacing: 1px;
 }
 td {
-  border: 1px solid rgb(160 160 160);
   padding: 8px 10px;
-  background-color: black;
   transition: 0.5s;
+
+  
 }
 .cell:hover {
-  border: 1px solid rgb(37, 36, 36);
-
+  
   background-color: rgb(68, 66, 66);
 }
 
 thead {
+  border: 1px solid rgb(160 160 160);
   background-color: rgb(228 240 245);
   color: blueviolet;
   padding: 50px;
 }
 
 .cell {
-  width: 50px;
-  height: 50px;
+  width: 30px;
+  height: 30px;
   text-align: center;
   font-size: 2em;
   padding: 8px;
+  box-shadow:;
 }
 .modal {
   display: none;
@@ -69,7 +70,7 @@ thead {
 }
 
 button {
-  margin: 20px 10px;
+  margin: 10px;
   border-radius: 5%;
   color: blueviolet;
 }
@@ -90,7 +91,7 @@ img {
 
 
 .footer {
-  margin-top: 300px;
+  margin-top: 50px;
 }
 
 
