@@ -14,7 +14,8 @@ const FLAG2 = '⏹️'
 
 const gLevel = {
     SIZE: 4,
-    MINES: 2
+    MINES: 2,
+    previousMines:null
 }
 
 const gGame = {
@@ -41,7 +42,6 @@ const gGame = {
 var gBoard
 
 var running = false
-var elapsedTime = 0
 var stopwatchInterval
 
 function init() {
@@ -161,6 +161,7 @@ function onGetMinesManually() {
     if (gGame.isOn) return
     gGame.isMinesAddedManually = true
     gGame.isFinishedGettingMines = false
+    gLevel.previousMines=gLevel.MINES
     gLevel.MINES = 0
     const elOnBtn = document.querySelector('.manualOn')
     elOnBtn.style.backgroundColor = 'yellow'
@@ -443,6 +444,14 @@ function toggleDarkMode() {
     gGame.isDarkMode = !gGame.isDarkMode
 }
 
+function displayMines(){
+    for (var i = 0; i < gLevel.SIZE; i++) {
+        for (var j = 0; j < gLevel.SIZE; j++) {
+            if (gBoard[i][j].isMine) renderCell({i,j},MINE,true) 
+        }
+    }
+
+}
 function changeLevel(elbtn) {
     var btnTxt = elbtn.innerText
     if (gGame.isOn) return
@@ -485,12 +494,13 @@ function gameOver(location) {
         return
     }
     stopStopwatch()
+    if (!gGame.isWin) displayMines()
     var msg = gGame.isWin ? 'You Win' : 'Game Over'
     document.querySelector('.emoji').innerText = gGame.isWin ? WIN : LOSE
     openModal(msg)
     if (!gGame.isMinesAddedManually) storeScore(gLevel.SIZE, gGame.secsPassed)
-    gLevel.SIZE = 4
-    gLevel.MINES = 2
+    if (gGame.isMinesAddedManually) gLevel.MINES=gLevel.previousMines
+    
 }
 
 
